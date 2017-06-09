@@ -1,0 +1,27 @@
+name: game
+version: "0.0.1"
+author: Justin <DoNotEmailMe@email.com>
+about: Simple game
+args:
+    - height:
+        short: h
+        long: height
+        value_name: HEIGHT
+        help: The height of the window
+        takes_value: true
+    - width:
+        short: w
+        long: width
+        value_name: WIDTH
+        help: The width of the window
+        takes_value: true
+
+subcommands:
+    - test:
+        about: controls testing features
+        version: "0.0.1"
+        author: Justin <DoNotEmailMe@email.com>
+        args:
+            - debug:
+                short: d
+                help: print debug information
