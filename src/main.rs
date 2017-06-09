@@ -11,13 +11,11 @@ fn main() {
     use std::rc::Rc;
     use piston_window::*;
     use sprite::*;
-    use ai_behavior::{
-        Action,
-        Sequence,
-        //    Wait,
-        WaitForever,
-        While,
-    };
+    use ai_behavior::{Action,
+                      Sequence,
+                      //    Wait,
+                      WaitForever,
+                      While};
     use clap::App;
 
     // get cli args
@@ -27,46 +25,58 @@ fn main() {
     let width = matches.value_of("width").unwrap_or("400").parse().expect("expected a number");
     let height = matches.value_of("height").unwrap_or("400").parse().expect("expected a number");
 
-    let mut window: PistonWindow =
-        WindowSettings::new("piston game", (width, height))
-            .exit_on_esc(true)
-            .opengl(OpenGL::V3_2)
-            .build()
-            .unwrap();
+    let mut window: PistonWindow = WindowSettings::new("piston game", (width, height))
+        .exit_on_esc(true)
+        .opengl(OpenGL::V3_2)
+        .build()
+        .unwrap();
 
     let assets = find_folder::Search::ParentsThenKids(3, 3).for_folder("assets").unwrap();
 
     // get font assets
-    let ref font = assets.join("FiraCode-Regular-modified.ttf");
+    let font = &assets.join("FiraCode-Regular-modified.ttf");
     let factory = window.factory.clone();
     let mut glyphs = Glyphs::new(font, factory).unwrap();
 
-    // create sprite
-    let tex = Rc::new(Texture::from_path(
-        &mut window.factory,
-        assets.join("rust.png"),
-        Flip::None,
-        &TextureSettings::new()
-    ).unwrap());
-    let mut sprite = Sprite::from_texture(tex.clone());
+    // create sprites
+    let background_tex = Rc::new(Texture::from_path(&mut window.factory,
+                                         assets.join("figure_1.png"),
+                                         Flip::None,
+                                         &TextureSettings::new())
+        .unwrap());
+    let mut background = Sprite::from_texture(background_tex.clone());
+    background.set_position(width as f64 / 2.0, height as f64 / 2.0);
+
+    let player_tex = Rc::new(Texture::from_path(&mut window.factory,
+                                         assets.join("rust.png"),
+                                         Flip::None,
+                                         &TextureSettings::new())
+        .unwrap());
+    let mut sprite = Sprite::from_texture(player_tex.clone());
     sprite.set_position(width as f64 / 2.0, height as f64 / 2.0);
+
+    let player_id = background.add_child(sprite);
 
     // create scene
     let mut scene = Scene::new();
-    let id = scene.add_child(sprite);
+    let background_id = scene.add_child(background);
 
     // create animations
-    let blink = While(Box::new(WaitForever), vec![
-        Action(Ease(EaseFunction::QuadraticIn, Box::new(FadeOut(1.0)))),
-        Action(Ease(EaseFunction::QuadraticOut, Box::new(FadeIn(1.0)))),
-    ]);
-    let left_anim = Sequence(vec![ Action(Ease(EaseFunction::BounceOut, Box::new(MoveBy(1.0, -100.0, 0.0)))), ]);
-    let right_anim = Sequence(vec![ Action(Ease(EaseFunction::BounceOut, Box::new(MoveBy(1.0, 100.0, 0.0)))), ]);
-    let up_anim = Sequence(vec![ Action(Ease(EaseFunction::BounceOut, Box::new(MoveBy(1.0, 0.0, -100.0)))), ]);
-    let down_anim = Sequence(vec![ Action(Ease(EaseFunction::BounceOut, Box::new(MoveBy(1.0, 0.0, 100.0)))), ]);
+    let blink = While(Box::new(WaitForever),
+                      vec![Action(Ease(EaseFunction::QuadraticIn, Box::new(FadeOut(1.0)))),
+                           Action(Ease(EaseFunction::QuadraticOut, Box::new(FadeIn(1.0))))]);
+    let left_anim = Sequence(vec![Action(Ease(EaseFunction::BounceOut,
+                                              Box::new(MoveBy(1.0, -100.0, 0.0))))]);
+    let right_anim = Sequence(vec![Action(Ease(EaseFunction::BounceOut,
+                                               Box::new(MoveBy(1.0, 100.0, 0.0))))]);
+    let up_anim = Sequence(vec![Action(Ease(EaseFunction::BounceOut,
+                                            Box::new(MoveBy(1.0, 0.0, -100.0))))]);
+    let down_anim = Sequence(vec![Action(Ease(EaseFunction::BounceOut,
+                                              Box::new(MoveBy(1.0, 0.0, 100.0))))]);
 
     // init scene setup
-    scene.run(id, &blink);
+    scene.run(player_id, &blink);
+    scene.toggle(player_id, &blink);
 
     // fps setup
     let mut fps_counter = FPSCounter::new();
@@ -75,27 +85,27 @@ fn main() {
     while let Some(e) = window.next() {
 
         let fps = fps_counter.tick();
+        scene.event(&e);
 
         if let Some(Button::Keyboard(key)) = e.press_args() {
             match key {
                 Key::F => {
                     // toggle fps
                     if show_fps {
-                      show_fps = false;
-                    } else{
-                      show_fps = true;
+                        show_fps = false;
+                    } else {
+                        show_fps = true;
                     }
-                },
-                Key::A => scene.run(id, &left_anim),
-                Key::D => scene.run(id, &right_anim),
-                Key::S => scene.run(id, &down_anim),
-                Key::W => scene.run(id, &up_anim),
-                Key::Space => scene.toggle(id, &blink),
+                }
+                Key::A => scene.run(player_id, &left_anim),
+                Key::D => scene.run(player_id, &right_anim),
+                Key::S => scene.run(player_id, &down_anim),
+                Key::W => scene.run(player_id, &up_anim),
+                Key::Space => scene.toggle(player_id, &blink),
                 _ => println!("Unregistered keyboard key '{:?}'", key),
             }
         }
 
-        scene.event(&e);
         window.draw_2d(&e, |c, g| {
             clear([1.0, 1.0, 1.0, 1.0], g);
             scene.draw(c.transform, g);
@@ -103,14 +113,9 @@ fn main() {
             // show fps
             if show_fps {
                 let fps_display_string = &*fps.to_string();
-                let transform = c.transform.trans(10.0, 100.0);
-                text::Text::new_color([0.0, 0.0, 0.0, 1.0], 32).draw(
-                    fps_display_string,
-                    &mut glyphs,
-                    &c.draw_state,
-                    transform,
-                    g
-                );
+                let transform = c.transform.trans(10.0, 30.0);
+                text::Text::new_color([0.0, 0.0, 0.0, 1.0], 32)
+                    .draw(fps_display_string, &mut glyphs, &c.draw_state, transform, g);
             }
 
         });
