@@ -22,16 +22,36 @@ fn main() {
     let yaml = load_yaml!("cli.yaml");
     let matches = App::from_yaml(yaml).get_matches();
 
-    let width = matches.value_of("width").unwrap_or("400").parse().expect("expected a number");
-    let height = matches.value_of("height").unwrap_or("400").parse().expect("expected a number");
+    let mut width = matches
+        .value_of("width")
+        .unwrap_or("400")
+        .parse()
+        .expect("expected a number");
+    let mut height = matches
+        .value_of("height")
+        .unwrap_or("400")
+        .parse()
+        .expect("expected a number");
+    let fullscreen = matches.is_present("fullscreen");
 
     let mut window: PistonWindow = WindowSettings::new("piston game", (width, height))
         .exit_on_esc(true)
         .opengl(OpenGL::V3_2)
+        .resizable(false)
+        .vsync(true)
+        .samples(4)
+        .fullscreen(fullscreen)
         .build()
         .unwrap();
 
-    let assets = find_folder::Search::ParentsThenKids(3, 3).for_folder("assets").unwrap();
+    if fullscreen {
+        width = window.draw_size().width;
+        height = window.draw_size().height;
+    }
+
+    let assets = find_folder::Search::ParentsThenKids(3, 3)
+        .for_folder("assets")
+        .unwrap();
 
     // get font assets
     let font = &assets.join("FiraCode-Regular-modified.ttf");
@@ -40,26 +60,27 @@ fn main() {
 
     // create sprites
     let background_tex = Rc::new(Texture::from_path(&mut window.factory,
-                                         assets.join("figure_1.png"),
-                                         Flip::None,
-                                         &TextureSettings::new())
-        .unwrap());
+                                                    assets.join("figure_1.png"),
+                                                    Flip::None,
+                                                    &TextureSettings::new())
+                                         .unwrap());
     let mut background = Sprite::from_texture(background_tex.clone());
     background.set_position(width as f64 / 2.0, height as f64 / 2.0);
 
     let player_tex = Rc::new(Texture::from_path(&mut window.factory,
-                                         assets.join("rust.png"),
-                                         Flip::None,
-                                         &TextureSettings::new())
-        .unwrap());
-    let mut sprite = Sprite::from_texture(player_tex.clone());
-    sprite.set_position(width as f64 / 2.0, height as f64 / 2.0);
+                                                assets.join("rust.png"),
+                                                Flip::None,
+                                                &TextureSettings::new())
+                                     .unwrap());
+    let mut player_sprite = Sprite::from_texture(player_tex.clone());
+    player_sprite.set_position(width as f64 / 2.0, height as f64 / 2.0);
 
-    let player_id = background.add_child(sprite);
+    let player_id = background.add_child(player_sprite);
 
     // create scene
     let mut scene = Scene::new();
-    let background_id = scene.add_child(background);
+    //let background_id =
+    scene.add_child(background);
 
     // create animations
     let blink = While(Box::new(WaitForever),
@@ -86,6 +107,12 @@ fn main() {
 
         let fps = fps_counter.tick();
         scene.event(&e);
+
+        // resize
+        //if let Input::Resize(w, h) = e {
+        //    width = w;
+        //    height = h;
+        //}
 
         if let Some(Button::Keyboard(key)) = e.press_args() {
             match key {
