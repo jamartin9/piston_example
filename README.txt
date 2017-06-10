@@ -6,7 +6,8 @@ USAGE:
     game-client [FLAGS] [OPTIONS]
 
 FLAGS:
-    -f, --fullscreen    Fullscreen Mode. Overrides width and height
+    -f, --fullscreen    Fullscreen Mode. Overrides width and
+                        height
         --help          Prints help information
     -V, --version       Prints version information
 

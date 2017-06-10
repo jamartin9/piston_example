@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
+# SDL2-devel SDL2_mixer-devel
 function main() {
-    #local TARGET="x86_64-unknown-linux-musl"
     local TARGET="x86_64-unknown-linux-gnu"
     export CARGO_INCREMENTAL=1 && \
     rustup run stable cargo update && \

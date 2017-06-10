@@ -6,8 +6,11 @@ extern crate sprite;
 extern crate find_folder;
 extern crate fps_counter;
 extern crate sdl2_window;
+extern crate music;
 
-
+//TODO: Menu/UI ( Conrod ? )
+//TODO: Physics
+//TODO: enemies spawns
 fn main() {
     use sdl2_window::Sdl2Window;
     use fps_counter::FPSCounter;
@@ -25,28 +28,29 @@ fn main() {
     let yaml = load_yaml!("cli.yaml");
     let matches = App::from_yaml(yaml).get_matches();
     let fullscreen = matches.is_present("fullscreen");
+    let resizeable = matches.is_present("resizeable");
     let mut width = matches
-            .value_of("width")
-            .unwrap_or("640")
-            .parse()
-            .expect("expected a number");
+        .value_of("width")
+        .unwrap_or("640")
+        .parse()
+        .expect("expected a number");
     let mut height = matches
-            .value_of("height")
-            .unwrap_or("480")
-            .parse()
-            .expect("expected a number");
+        .value_of("height")
+        .unwrap_or("480")
+        .parse()
+        .expect("expected a number");
 
     // make zero'd out window
     let mut window: PistonWindow<Sdl2Window> = WindowSettings::new("piston game", (width, height))
         .exit_on_esc(true)
-        .resizable(false)
+        .resizable(resizeable)
         .opengl(OpenGL::V3_2)
         .vsync(true)
         .samples(4)
         .fullscreen(fullscreen)
         .build()
         .unwrap();
-    window.set_position((0,0));
+    window.set_position((0, 0));
     if fullscreen {
         width = window.draw_size().width;
         height = window.draw_size().height;
@@ -55,6 +59,9 @@ fn main() {
     let assets = find_folder::Search::ParentsThenKids(3, 3)
         .for_folder("assets")
         .unwrap();
+
+    // sdl context for audio
+    let sdl = window.window.sdl_context.to_owned();
 
     // get font assets
     let font = &assets.join("FiraCode-Regular-modified.ttf");
@@ -76,8 +83,7 @@ fn main() {
                                                 &TextureSettings::new())
                                      .unwrap());
     let mut player_sprite = Sprite::from_texture(player_tex.clone());
-    player_sprite.set_position(0.0,0.0);
-
+    player_sprite.set_position(0.0, 0.0);
     let player_id = background.add_child(player_sprite);
 
     // create scene
@@ -106,55 +112,64 @@ fn main() {
     let mut fps_counter = FPSCounter::new();
     let mut show_fps = false;
 
-    while let Some(e) = window.next() {
-
-        let fps = fps_counter.tick();
-        scene.event(&e);
-
-        // resize
-        if let Input::Resize(w, h) = e {
-            width = w;
-            height = h;
-            println!("{:?} {:?}", width, height);
-            //scene.child_mut(background).unwrap().set_scale(0.5, 0.5);
-        }
-
-        if let Some(Button::Keyboard(key)) = e.press_args() {
-            match key {
-                Key::F => {
-                    // toggle fps
-                    if show_fps {
-                        show_fps = false;
-                    } else {
-                        show_fps = true;
-                    }
-                },
-                Key::A => scene.run(player_id, &left_anim),
-                Key::D => scene.run(player_id, &right_anim),
-                Key::S => scene.run(player_id, &down_anim),
-                Key::W => scene.run(player_id, &up_anim),
-                Key::Space => {
-
-                    println!("{:?}",scene.child(player_id).unwrap().get_position());
-                    scene.toggle(player_id, &blink)
-                },
-                _ => println!("Unregistered keyboard key '{:?}'", key),
-            }
-        }
-
-        window.draw_2d(&e, |c, g| {
-            clear([1.0, 1.0, 1.0, 1.0], g);
-            scene.draw(c.transform, g);
-
-            // show fps
-            if show_fps {
-                let fps_display_string = &*fps.to_string();
-                let transform = c.transform.trans(10.0, 30.0);
-                text::Text::new_color([0.0, 0.0, 0.0, 1.0], 32)
-                    .draw(fps_display_string, &mut glyphs, &c.draw_state, transform, g);
-            }
-
-        });
-
+    // sdl audio
+    #[derive(Copy, Clone, Hash, PartialEq, Eq)]
+    enum Music {
+        Piano,
     }
+    #[derive(Copy, Clone, Hash, PartialEq, Eq)]
+    enum Sound {
+        Ding,
+    }
+    music::start::<Music, Sound, _>(Option::from(sdl), || {
+        music::bind_music_file(Music::Piano, "./assets/piano.wav");
+        music::bind_sound_file(Sound::Ding, "./assets/ding.wav");
+        music::play_music(&Music::Piano, music::Repeat::Forever);
+        music::play_sound(&Sound::Ding, music::Repeat::Times(1));
+
+        // window events
+        while let Some(e) = window.next() {
+            let fps = fps_counter.tick();
+            scene.event(&e);
+            // resize
+            if let Input::Resize(w, h) = e {
+                width = w;
+                height = h;
+                println!("{:?} {:?}", width, height);
+                //scene.child_mut(background).unwrap().set_scale(0.5, 0.5);
+            }
+            if let Some(Button::Keyboard(key)) = e.press_args() {
+                match key {
+                    Key::F => {
+                        // toggle fps
+                        if show_fps {
+                            show_fps = false;
+                        } else {
+                            show_fps = true;
+                        }
+                    }
+                    Key::A => scene.run(player_id, &left_anim),
+                    Key::D => scene.run(player_id, &right_anim),
+                    Key::S => scene.run(player_id, &down_anim),
+                    Key::W => scene.run(player_id, &up_anim),
+                    Key::Space => {
+                        println!("{:?}", scene.child(player_id).unwrap().get_position());
+                        scene.toggle(player_id, &blink)
+                    }
+                    _ => println!("Unregistered keyboard key '{:?}'", key),
+                }
+            }
+            window.draw_2d(&e, |c, g| {
+                clear([1.0, 1.0, 1.0, 1.0], g);
+                scene.draw(c.transform, g);
+                // show fps
+                if show_fps {
+                    let fps_display_string = &*fps.to_string();
+                    let transform = c.transform.trans(10.0, 30.0);
+                    text::Text::new_color([1.0, 1.0, 1.0, 1.0], 32)
+                        .draw(fps_display_string, &mut glyphs, &c.draw_state, transform, g);
+                }
+            });
+        }
+    });
 }

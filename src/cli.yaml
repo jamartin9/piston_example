@@ -1,19 +1,24 @@
 name: game
 version: "0.0.1"
 author: Justin <DoNotEmailMe@email.com>
-about: Simple game client skeleton
+about: Simple game client skeleton using piston
 args:
     - fullscreen:
         short: f
         long: fullscreen
         multiple: false
-        help: Fullscreen Mode. Overrides width and height
+        help: Fullscreen Mode. Overrides width, height and resizeable
     - height:
         short: h
         long: height
         value_name: HEIGHT
         help: The height of the window
         takes_value: true
+    - resizeable:
+        short: r
+        long: resizeable
+        multiple: false
+        help: Resizeable mode
     - width:
         short: w
         long: width
