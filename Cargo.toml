@@ -1,6 +1,6 @@
 [package]
 authors = ["jam"]
-name = "game"
+name = "game-client"
 version = "0.1.0"
 
 [dependencies]
@@ -9,12 +9,9 @@ piston-ai_behavior = "0.20.0"
 piston2d-sprite = "0.36.0"
 piston_window = "0.66.0"
 fps_counter = "0.2.0"
+pistoncore-sdl2_window = "0.43.0"
 
 [dependencies.clap]
 default-features = false
-features = ["suggestions", "color", "wrap_help", "yaml", "unstable", "lints"]
+features = ["suggestions", "color", "wrap_help", "yaml"]
 version = "2.24.2"
-
-[dev-dependencies]
-clippy = "0.0.138"
-rustfmt = "0.8.4"

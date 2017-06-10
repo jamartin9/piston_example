@@ -1,12 +1,12 @@
 name: game
 version: "0.0.1"
 author: Justin <DoNotEmailMe@email.com>
-about: Simple game
+about: Simple game client skeleton
 args:
     - fullscreen:
         short: f
         long: fullscreen
-        value_name: FULLSCREEN
+        multiple: false
         help: Fullscreen Mode. Overrides width and height
     - height:
         short: h
@@ -20,13 +20,3 @@ args:
         value_name: WIDTH
         help: The width of the window
         takes_value: true
-
-subcommands:
-    - test:
-        about: controls testing features
-        version: "0.0.1"
-        author: Justin <DoNotEmailMe@email.com>
-        args:
-            - debug:
-                short: d
-                help: print debug information

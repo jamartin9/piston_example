@@ -5,8 +5,11 @@ extern crate ai_behavior;
 extern crate sprite;
 extern crate find_folder;
 extern crate fps_counter;
+extern crate sdl2_window;
+
 
 fn main() {
+    use sdl2_window::Sdl2Window;
     use fps_counter::FPSCounter;
     use std::rc::Rc;
     use piston_window::*;
@@ -16,34 +19,34 @@ fn main() {
                       //    Wait,
                       WaitForever,
                       While};
-    use clap::App;
 
     // get cli args
+    use clap::App;
     let yaml = load_yaml!("cli.yaml");
     let matches = App::from_yaml(yaml).get_matches();
-
-    let mut width = matches
-        .value_of("width")
-        .unwrap_or("400")
-        .parse()
-        .expect("expected a number");
-    let mut height = matches
-        .value_of("height")
-        .unwrap_or("400")
-        .parse()
-        .expect("expected a number");
     let fullscreen = matches.is_present("fullscreen");
+    let mut width = matches
+            .value_of("width")
+            .unwrap_or("640")
+            .parse()
+            .expect("expected a number");
+    let mut height = matches
+            .value_of("height")
+            .unwrap_or("480")
+            .parse()
+            .expect("expected a number");
 
-    let mut window: PistonWindow = WindowSettings::new("piston game", (width, height))
+    // make zero'd out window
+    let mut window: PistonWindow<Sdl2Window> = WindowSettings::new("piston game", (width, height))
         .exit_on_esc(true)
-        .opengl(OpenGL::V3_2)
         .resizable(false)
+        .opengl(OpenGL::V3_2)
         .vsync(true)
         .samples(4)
         .fullscreen(fullscreen)
         .build()
         .unwrap();
-
+    window.set_position((0,0));
     if fullscreen {
         width = window.draw_size().width;
         height = window.draw_size().height;
@@ -73,7 +76,7 @@ fn main() {
                                                 &TextureSettings::new())
                                      .unwrap());
     let mut player_sprite = Sprite::from_texture(player_tex.clone());
-    player_sprite.set_position(width as f64 / 2.0, height as f64 / 2.0);
+    player_sprite.set_position(0.0,0.0);
 
     let player_id = background.add_child(player_sprite);
 
@@ -87,13 +90,13 @@ fn main() {
                       vec![Action(Ease(EaseFunction::QuadraticIn, Box::new(FadeOut(1.0)))),
                            Action(Ease(EaseFunction::QuadraticOut, Box::new(FadeIn(1.0))))]);
     let left_anim = Sequence(vec![Action(Ease(EaseFunction::BounceOut,
-                                              Box::new(MoveBy(1.0, -100.0, 0.0))))]);
+                                              Box::new(MoveBy(1.0, -32.0, 0.0))))]);
     let right_anim = Sequence(vec![Action(Ease(EaseFunction::BounceOut,
-                                               Box::new(MoveBy(1.0, 100.0, 0.0))))]);
+                                               Box::new(MoveBy(1.0, 32.0, 0.0))))]);
     let up_anim = Sequence(vec![Action(Ease(EaseFunction::BounceOut,
-                                            Box::new(MoveBy(1.0, 0.0, -100.0))))]);
+                                            Box::new(MoveBy(1.0, 0.0, -32.0))))]);
     let down_anim = Sequence(vec![Action(Ease(EaseFunction::BounceOut,
-                                              Box::new(MoveBy(1.0, 0.0, 100.0))))]);
+                                              Box::new(MoveBy(1.0, 0.0, 32.0))))]);
 
     // init scene setup
     scene.run(player_id, &blink);
@@ -109,10 +112,12 @@ fn main() {
         scene.event(&e);
 
         // resize
-        //if let Input::Resize(w, h) = e {
-        //    width = w;
-        //    height = h;
-        //}
+        if let Input::Resize(w, h) = e {
+            width = w;
+            height = h;
+            println!("{:?} {:?}", width, height);
+            //scene.child_mut(background).unwrap().set_scale(0.5, 0.5);
+        }
 
         if let Some(Button::Keyboard(key)) = e.press_args() {
             match key {
@@ -123,12 +128,16 @@ fn main() {
                     } else {
                         show_fps = true;
                     }
-                }
+                },
                 Key::A => scene.run(player_id, &left_anim),
                 Key::D => scene.run(player_id, &right_anim),
                 Key::S => scene.run(player_id, &down_anim),
                 Key::W => scene.run(player_id, &up_anim),
-                Key::Space => scene.toggle(player_id, &blink),
+                Key::Space => {
+
+                    println!("{:?}",scene.child(player_id).unwrap().get_position());
+                    scene.toggle(player_id, &blink)
+                },
                 _ => println!("Unregistered keyboard key '{:?}'", key),
             }
         }
