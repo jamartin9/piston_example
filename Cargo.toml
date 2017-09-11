@@ -4,15 +4,19 @@ name = "game-client"
 version = "0.1.0"
 
 [dependencies]
+conrod = "0.52.0"
 find_folder = "0.3.0"
+fps_counter = "0.2.0"
+nphysics2d = "0.6"
 piston-ai_behavior = "0.20.0"
 piston2d-sprite = "0.36.0"
 piston_window = "0.66.0"
-fps_counter = "0.2.0"
 pistoncore-sdl2_window = "0.43.0"
-piston-music = { git= "https://github.com/jamartin9/music.git" }
+rand = "0.3.15"
+piston-music = "0.23.0"
+sdl2 = "0.30.0"
 
 [dependencies.clap]
 default-features = false
 features = ["suggestions", "color", "wrap_help", "yaml"]
-version = "2.24.2"
+version = "2.26.0"

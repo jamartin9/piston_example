@@ -7,9 +7,10 @@ extern crate find_folder;
 extern crate fps_counter;
 extern crate sdl2_window;
 extern crate music;
+extern crate sdl2;
 
 //TODO: Menu/UI ( Conrod ? )
-//TODO: Physics
+//TODO: Physics ( nphysics ? )
 //TODO: enemies spawns
 fn main() {
     use sdl2_window::Sdl2Window;
@@ -25,6 +26,7 @@ fn main() {
 
     // get cli args
     use clap::App;
+
     let yaml = load_yaml!("cli.yaml");
     let matches = App::from_yaml(yaml).get_matches();
     let fullscreen = matches.is_present("fullscreen");
@@ -41,35 +43,37 @@ fn main() {
         .expect("expected a number");
 
     // make zero'd out window
-    let mut window: PistonWindow<Sdl2Window> = WindowSettings::new("piston game", (width, height))
+    let mut piston_window: PistonWindow<Sdl2Window> = WindowSettings::new("piston game", (width, height))
         .exit_on_esc(true)
-        .resizable(resizeable)
+        .resizable(true)
         .opengl(OpenGL::V3_2)
         .vsync(true)
         .samples(4)
         .fullscreen(fullscreen)
         .build()
         .unwrap();
-    window.set_position((0, 0));
+
+    piston_window.set_position((0, 0));
     if fullscreen {
-        width = window.draw_size().width;
-        height = window.draw_size().height;
+        width = piston_window.draw_size().width;
+        height = piston_window.draw_size().height;
     }
 
     let assets = find_folder::Search::ParentsThenKids(3, 3)
         .for_folder("assets")
         .unwrap();
 
-    // sdl context for audio
-    let sdl = window.window.sdl_context.to_owned();
+    // sdl context
+    let sdl = piston_window.window.sdl_context.to_owned();
+    let ev = sdl.event().unwrap();
 
     // get font assets
     let font = &assets.join("FiraCode-Regular-modified.ttf");
-    let factory = window.factory.clone();
+    let factory = piston_window.factory.clone();
     let mut glyphs = Glyphs::new(font, factory).unwrap();
 
     // create sprites
-    let background_tex = Rc::new(Texture::from_path(&mut window.factory,
+    let background_tex = Rc::new(Texture::from_path(&mut piston_window.factory,
                                                     assets.join("figure_1.png"),
                                                     Flip::None,
                                                     &TextureSettings::new())
@@ -77,7 +81,7 @@ fn main() {
     let mut background = Sprite::from_texture(background_tex.clone());
     background.set_position(width as f64 / 2.0, height as f64 / 2.0);
 
-    let player_tex = Rc::new(Texture::from_path(&mut window.factory,
+    let player_tex = Rc::new(Texture::from_path(&mut piston_window.factory,
                                                 assets.join("rust.png"),
                                                 Flip::None,
                                                 &TextureSettings::new())
@@ -121,26 +125,42 @@ fn main() {
     enum Sound {
         Ding,
     }
-    music::start::<Music, Sound, _>(Option::from(sdl), || {
+
+    music::start_context::<Music, Sound, _>(&sdl, 16, || {
         music::bind_music_file(Music::Piano, "./assets/piano.wav");
         music::bind_sound_file(Sound::Ding, "./assets/ding.wav");
-        music::play_music(&Music::Piano, music::Repeat::Forever);
-        music::play_sound(&Sound::Ding, music::Repeat::Times(1));
+        //music::play_music(&Music::Piano, music::Repeat::Forever);
+        //music::play_sound(&Sound::Ding, music::Repeat::Times(1));
 
         // window events
-        while let Some(e) = window.next() {
+        while let Some(e) = piston_window.next() {
             let fps = fps_counter.tick();
             scene.event(&e);
             // resize
             if let Input::Resize(w, h) = e {
                 width = w;
                 height = h;
-                println!("{:?} {:?}", width, height);
-                //scene.child_mut(background).unwrap().set_scale(0.5, 0.5);
+                println!("Resize: {:?} {:?}", width, height);
+                println!("Resize Window: {:?}",(piston_window.draw_size().width, piston_window.draw_size().height));
+                println!("Resize Drawable: {:?}",piston_window.window.window.drawable_size());
             }
             if let Some(Button::Keyboard(key)) = e.press_args() {
                 match key {
                     Key::F => {
+                        println!("F1 Window: {:?}",(piston_window.draw_size().width, piston_window.draw_size().height));
+                        println!("F1 Drawable: {:?}",piston_window.window.window.drawable_size());
+                        // sets SDL size
+                        piston_window.window.window.set_size(480,480);
+                        // updates drawable size in piston/SDL
+                        let event = sdl2::event::Event::Window {
+                            timestamp: (0),
+                            window_id: (0),
+                            win_event: ( sdl2::event::WindowEvent::Resized(480,480)),
+                        };
+                        ev.push_event(event);
+                        //window.window.window.maximize();
+                        //scene.child_mut(background).unwrap().set_scale(0.5, 0.5);
+
                         // toggle fps
                         if show_fps {
                             show_fps = false;
@@ -159,7 +179,7 @@ fn main() {
                     _ => println!("Unregistered keyboard key '{:?}'", key),
                 }
             }
-            window.draw_2d(&e, |c, g| {
+            piston_window.draw_2d(&e, |c, g| {
                 clear([1.0, 1.0, 1.0, 1.0], g);
                 scene.draw(c.transform, g);
                 // show fps
